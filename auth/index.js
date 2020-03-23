@@ -16,12 +16,14 @@ const check = {
   own: function(req, owner) {
     //decodificar el token
     const decoded = decodeHeader(req);
-    console.log(decoded);
 
     //Comprobar si es o no propio
     if (decoded.id !== owner) {
       throw error('No puedes hacer esto', 401);
     }
+  },
+  logged: function(req) {
+    const decoded = decodeHeader(req);
   },
 };
 

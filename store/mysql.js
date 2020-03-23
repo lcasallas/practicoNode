@@ -88,7 +88,9 @@ function update(tabla, data) {
 }
 
 async function upsert(tabla, data) {
-  const row = await get(tabla, data.id);
+  let table = tabla === 'user_follow' ? 'user' : tabla;
+  console.log('TABLAcONsulta:', table);
+  const row = await get(table, data.id || '0');
   if (row.length === 0) {
     return insert(tabla, data);
   } else {
@@ -96,15 +98,25 @@ async function upsert(tabla, data) {
   }
 }
 
-function query(tabla, qry) {
-  console.log(qry);
+function query(tabla, qry, join) {
+  let joinQuery = '';
+  if (join) {
+    const key = Object.keys(join)[0];
+    const val = join[key];
+    joinQuery = `JOIN ${key} ON ${tabla}.${val} = ${key}.id`;
+  }
+
   return new Promise((resolve, reject) => {
-    connection.query(`SELECT * FROM ${tabla} WHERE ?`, qry, (err, result) => {
-      if (err) {
-        return reject(err);
+    connection.query(
+      `SELECT * FROM ${tabla} ${joinQuery} WHERE ${tabla}.?`,
+      qry,
+      (err, result) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(result || null);
       }
-      resolve(result[0] || null);
-    });
+    );
   });
 }
 

@@ -2,15 +2,29 @@ const nanoid = require('nanoid');
 const TABLA = 'user';
 const auth = require('../auth');
 
-module.exports = function(injectedStore) {
+module.exports = function(injectedStore, injectedCache) {
+  let cache = injectedCache;
   let store = injectedStore;
 
   if (!store) {
     store = require('../../../store/dummy');
   }
 
-  function list() {
-    return store.list(TABLA);
+  if (!cache) {
+    cache = require('../../../store/dummy');
+  }
+
+  async function list() {
+    let users = await cache.list(TABLA);
+    if (!users) {
+      console.log('no estaba en cache, buscando en BD');
+      users = await store.list(TABLA);
+      cache.upsert(TABLA, users);
+    } else {
+      console.log('nos traemos los datos del cache');
+    }
+
+    return users;
   }
 
   function get(id) {
@@ -40,9 +54,25 @@ module.exports = function(injectedStore) {
     return store.upsert(TABLA, user);
   }
 
+  function follow(from, to) {
+    return store.upsert(TABLA + '_follow', {
+      user_from: from,
+      user_to: to,
+    });
+  }
+
+  async function following(user) {
+    const join = {};
+    join[TABLA] = 'user_to';
+    const query = { user_from: user };
+    return await store.query(TABLA + '_follow', query, join);
+  }
+
   return {
     list,
     get,
     upsert,
+    follow,
+    following,
   };
 };
